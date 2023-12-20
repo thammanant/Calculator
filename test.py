@@ -24,6 +24,8 @@ tokens = (
     'LBRACKET',
     'RBRACKET',
     'COMMA',
+    'TRUE',
+    'FALSE',
     'ERROR',
 )
 
@@ -47,6 +49,8 @@ t_LIST = r'list'
 t_LBRACKET = r'\['
 t_RBRACKET = r'\]'
 t_COMMA = r','
+t_TRUE = r'1'
+t_FALSE = r'0'
 
 
 def t_REAL(t):
@@ -84,24 +88,35 @@ lexer = lex.lex()
 data = '''
 23+8
 2.5 * 0
-5NUM^ 3.0
+5^3.0
 x=5
 10*x
 x =y
 x!=5
 X#+8
-x = list[10]
-x[0] = 1
-x[1]+1
+1 > 0
+1 == 1
+0 != 1
 '''
 
 lexer.input(data)
 
-output_file_content = []
+output_file_content = ["PHASE I: LEXICAL ANALYZER"]
 
 # Tokenize the input
+line = ""
 for tok in lexer:
-    output_file_content.append(f"{tok.value}/{tok.type}")
+    if tok.type not in ['ERROR', 'ASSIGN', 'EQUAL', 'NOT_EQUAL', 'GREATER', 'LESS', 'GREATER_EQUAL', 'LESS_EQUAL']:
+        line += f"{tok.value}/{tok.type} "
+    elif tok.type in ['EQUAL', 'NOT_EQUAL', 'GREATER', 'LESS', 'GREATER_EQUAL', 'LESS_EQUAL']:
+        if tok.type == 'EQUAL':
+            line += "1/TRUE "
+        else:
+            line += "0/FALSE "
+    else:
+        if line:
+            output_file_content.append(line.strip())
+            line = ""
 
 # Write tokenized output to a file
 with open("output_file.txt", "w") as output_file:
