@@ -1,0 +1,71 @@
+LOAD 23
+PLUS
+LOAD 8
+STORE print
+
+LOAD 2.5
+TIMES
+LOAD 0
+STORE print
+
+LOAD 5
+LOAD NUM
+POW
+LOAD 3.0
+STORE print
+
+LOAD x
+LOAD 5
+STORE print
+
+LOAD 10
+TIMES
+LOAD x
+STORE print
+
+LOAD x
+LOAD y
+STORE print
+
+LOAD x
+NOT_EQUAL
+LOAD 5
+STORE print
+
+LOAD X
+PLUS
+LOAD 8
+STORE print
+
+LOAD x
+LOAD list
+LOAD 10
+STORE print
+
+LOAD y
+LOAD list
+LOAD 2
+STORE print
+
+LOAD x
+LOAD 0
+LOAD 1
+STORE print
+
+LOAD y
+LOAD 1
+LOAD x
+LOAD 0
+PLUS
+LOAD 1
+STORE print
+
+LOAD print
+LOAD y
+LOAD 1
+STORE print
+
+LOAD 5
+LESS
+LOAD 4
+STORE print
