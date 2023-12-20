@@ -109,55 +109,37 @@ def update_element(var_name, index, value):
 # Build the lexer
 lexer = lex.lex()
 
-# Test the lexer
-data = '''
-x = list[10]
-y = list[2]
-x[0] = 1
-y[1] = x[0] + 1
-print(y[1])
-'''
+# Read input file
+with open("input_file.txt", "r") as input_file:
+    input_data = input_file.readlines()
 
-lexer.input(data)
+output_file_content = []
 
-output_file_content = ["PHASE I: LEXICAL ANALYZER"]
+for line in input_data:
+    lexer.input(line.strip())
+    tokens = []
 
-# Tokenize the input
-line = ""
-for tok in lexer:
-    if tok.type not in ['ERROR', 'ASSIGN', 'EQUAL', 'NOT_EQUAL', 'GREATER', 'LESS', 'GREATER_EQUAL', 'LESS_EQUAL', 'PRINT']:
-        line += f"{tok.value}/{tok.type} "
-    elif tok.type in ['EQUAL', 'NOT_EQUAL', 'GREATER', 'LESS', 'GREATER_EQUAL', 'LESS_EQUAL']:
-        if tok.type == 'EQUAL':
-            line += "1/TRUE "
+    # Tokenize each line
+    for tok in lexer:
+        if tok.type not in ['ERROR', 'ASSIGN', 'EQUAL', 'NOT_EQUAL', 'GREATER', 'LESS', 'GREATER_EQUAL', 'LESS_EQUAL', 'PRINT']:
+            tokens.append(f"{tok.value}/{tok.type}")
+        elif tok.type in ['EQUAL', 'NOT_EQUAL', 'GREATER', 'LESS', 'GREATER_EQUAL', 'LESS_EQUAL']:
+            if tok.type == 'EQUAL':
+                tokens.append("=/= ")
+            else:
+                tokens.append("!=/= ")
         else:
-            line += "0/FALSE "
-    else:
-        if line:
-            output_file_content.append(line.strip())
-            line = ""
+            tokens.append(f"{tok.value}/{tok.type}")
 
-# Interpretation of tokens
-lexer = lex.lex()
-lexer.input(data)
+        # Check if end of statement
+        if tok.type == 'PRINT':
+            output_file_content.append(" ".join(tokens))
+            tokens = []
 
-for tok in lexer:
-    if tok.type == 'VAR' and lexer.token() and lexer.token().type == 'LBRACKET':
-        var_name = tok.value
-        lexer.token()  # Move to the LBRACKET token
-        lexer.token()  # Move to the index value
-        index = lexer.token().value
-        lexer.token()  # Move to the RBRACKET token
-        lexer.token()  # Move to the ASSIGN token or PLUS, MINUS, etc.
-        if lexer.token().type == 'ASSIGN':
-            lexer.token()  # Skip the ASSIGN token
-            lexer.token()  # Move to the value token
-            value = lexer.token().value
-            update_element(var_name, index, value)
+    # Add the last statement to output if any
+    if tokens:
+        output_file_content.append(" ".join(tokens))
 
-    # Add other token interpretation logic here for your specific use case
-
-# Write tokenized output to a file
+# Write tokenized output to a file with desired format
 with open("output_file.txt", "w") as output_file:
-    for line in output_file_content:
-        output_file.write(line + "\n")
+    output_file.write("\n".join(output_file_content))
