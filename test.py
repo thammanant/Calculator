@@ -119,7 +119,9 @@ for line in input_data:
     lexer.input(line.strip())
     tokens = []
 
-    # Tokenize each line
+    # Tokenize each line and generate assembly-like code
+    assembly_code = ""
+    result_var = ""
     for tok in lexer:
         if tok.type not in ['ERROR', 'ASSIGN', 'EQUAL', 'NOT_EQUAL', 'GREATER', 'LESS', 'GREATER_EQUAL', 'LESS_EQUAL', 'PRINT']:
             tokens.append(f"{tok.value}/{tok.type}")
@@ -131,15 +133,29 @@ for line in input_data:
         else:
             tokens.append(f"{tok.value}/{tok.type}")
 
-        # Check if end of statement
-        if tok.type == 'PRINT':
-            output_file_content.append(" ".join(tokens))
+        # Generate assembly code
+        if tok.type in ['INT', 'REAL', 'VAR']:
+            assembly_code += f"LOAD {tok.value}\n"
+            result_var = tok.value
+        elif tok.type in ['PLUS', 'MINUS', 'TIMES', 'DIVIDE', 'INT_DIVIDE', 'POW']:
+            assembly_code += f"{tok.type}\n"
+        elif tok.type in ['EQUAL', 'NOT_EQUAL', 'GREATER', 'LESS', 'GREATER_EQUAL', 'LESS_EQUAL']:
+            assembly_code += f"{tok.type}\n"
+            result_var = "print"  # Logical expression sets result to 'print'
+        elif tok.type == 'PRINT':
+            if result_var != "print":
+                assembly_code += f"STORE print\n"
+            output_file_content.append(assembly_code)
             tokens = []
+            assembly_code = ""
+            result_var = ""
 
     # Add the last statement to output if any
-    if tokens:
-        output_file_content.append(" ".join(tokens))
+    if assembly_code:
+        if result_var != "print":
+            assembly_code += f"STORE print\n"
+        output_file_content.append(assembly_code)
 
-# Write tokenized output to a file with desired format
-with open("output_file.txt", "w") as output_file:
+# Write assembly-like output to a file
+with open("assembly_output.txt", "w") as output_file:
     output_file.write("\n".join(output_file_content))
