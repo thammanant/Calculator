@@ -24,6 +24,7 @@ tokens = (
     'LBRACKET',
     'RBRACKET',
     'COMMA',
+    'PRINT',
     'TRUE',
     'FALSE',
     'ERROR',
@@ -45,10 +46,10 @@ t_NOT_EQUAL = r'!='
 t_LPAREN = r'\('
 t_RPAREN = r'\)'
 t_ASSIGN = r'='
-t_LIST = r'list'
 t_LBRACKET = r'\['
 t_RBRACKET = r'\]'
 t_COMMA = r','
+t_PRINT = r'print'
 t_TRUE = r'1'
 t_FALSE = r'0'
 
@@ -79,24 +80,42 @@ def t_error(t):
 
 
 # Ignore whitespace characters
-t_ignore = ' \t'
+t_ignore = ' \t\n'
+
+
+# Symbol table to store variables and their values
+symbol_table = {}
+
+
+def create_list(size, initial_value=0):
+    return [initial_value] * size
+
+
+def access_element(var_name, index):
+    if var_name in symbol_table and index < len(symbol_table[var_name]):
+        return symbol_table[var_name][index]
+    else:
+        print("Index out of range or variable not found.")
+        return None
+
+
+def update_element(var_name, index, value):
+    if var_name in symbol_table and index < len(symbol_table[var_name]):
+        symbol_table[var_name][index] = value
+    else:
+        print("Index out of range or variable not found.")
+
 
 # Build the lexer
 lexer = lex.lex()
 
 # Test the lexer
 data = '''
-23+8
-2.5 * 0
-5^3.0
-x=5
-10*x
-x =y
-x!=5
-X#+8
-1 > 0
-1 == 1
-0 != 1
+x = list[10]
+y = list[2]
+x[0] = 1
+y[1] = x[0] + 1
+print(y[1])
 '''
 
 lexer.input(data)
@@ -106,7 +125,7 @@ output_file_content = ["PHASE I: LEXICAL ANALYZER"]
 # Tokenize the input
 line = ""
 for tok in lexer:
-    if tok.type not in ['ERROR', 'ASSIGN', 'EQUAL', 'NOT_EQUAL', 'GREATER', 'LESS', 'GREATER_EQUAL', 'LESS_EQUAL']:
+    if tok.type not in ['ERROR', 'ASSIGN', 'EQUAL', 'NOT_EQUAL', 'GREATER', 'LESS', 'GREATER_EQUAL', 'LESS_EQUAL', 'PRINT']:
         line += f"{tok.value}/{tok.type} "
     elif tok.type in ['EQUAL', 'NOT_EQUAL', 'GREATER', 'LESS', 'GREATER_EQUAL', 'LESS_EQUAL']:
         if tok.type == 'EQUAL':
@@ -117,6 +136,26 @@ for tok in lexer:
         if line:
             output_file_content.append(line.strip())
             line = ""
+
+# Interpretation of tokens
+lexer = lex.lex()
+lexer.input(data)
+
+for tok in lexer:
+    if tok.type == 'VAR' and lexer.token() and lexer.token().type == 'LBRACKET':
+        var_name = tok.value
+        lexer.token()  # Move to the LBRACKET token
+        lexer.token()  # Move to the index value
+        index = lexer.token().value
+        lexer.token()  # Move to the RBRACKET token
+        lexer.token()  # Move to the ASSIGN token or PLUS, MINUS, etc.
+        if lexer.token().type == 'ASSIGN':
+            lexer.token()  # Skip the ASSIGN token
+            lexer.token()  # Move to the value token
+            value = lexer.token().value
+            update_element(var_name, index, value)
+
+    # Add other token interpretation logic here for your specific use case
 
 # Write tokenized output to a file
 with open("output_file.txt", "w") as output_file:
