@@ -145,7 +145,8 @@ for line in input_data:
         elif tok.type in ['ASSIGN']:
             # Handle variable assignment
             # Example: Assigning a value to a variable
-            assembly_code += f"MOV {result_var}, {tok.value}\n"  # Move value to variable
+            assembly_code += f"MOV {result_var}, EAX\n"  # Move value from EAX register to variable
+            result_var = None  # No need to update print variable for assignment
         elif tok.type in ['LESS', 'GREATER', 'LESS_EQUAL', 'GREATER_EQUAL', 'EQUAL', 'NOT_EQUAL']:
             # Evaluate logical expressions
             # Example: Comparison and storing result in variable 'print'
@@ -155,6 +156,21 @@ for line in input_data:
             assembly_code += "MOVZX EAX, AL\n"  # Zero-extend AL into EAX
             assembly_code += "MOV print, EAX\n"  # Store result in variable 'print'
             result_var = "print"  # Update the result variable after evaluation
+            # Load 1 or 0 based on comparison result
+            assembly_code += "MOV EAX, 1\n"  # Load 1 to EAX
+            assembly_code += f"JMP SKIP_LOAD_ZERO\n"  # Jump to skip loading 0 if print is already 1
+            assembly_code += "MOV EAX, 0\n"  # Load 0 to EAX
+            assembly_code += "SKIP_LOAD_ZERO:\n"  # Label to skip loading 0 if print is 1
+        elif tok.type in ['AND', 'OR', 'NOT']:
+            # Handle logical AND, OR, and NOT operations
+            # Example: Logical AND operation
+            assembly_code += f"MOV EBX, {tok.value}\n"  # Move the second operand to EBX register
+            if tok.type == 'AND':
+                assembly_code += f"AND EAX, EBX\n"  # Perform logical AND on values in EAX and EBX registers
+            elif tok.type == 'OR':
+                assembly_code += f"OR EAX, EBX\n"  # Perform logical OR on values in EAX and EBX registers
+            elif tok.type == 'NOT':
+                assembly_code += f"NOT EAX\n"  # Perform logical NOT on value in EAX register
 
             # Add the tokenized line to the output content
     output_file_content.append(tokenized_line.strip())
