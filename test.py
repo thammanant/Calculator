@@ -135,55 +135,76 @@ for line in input_data:
         tokenized_line += f"{tok.value}/{tok.type} "
 
         # Generate assembly code for various token types
-        if tok.type == 'INT' or tok.type == 'REAL' or tok.type == 'VAR':
-            assembly_code += f"MOV EAX, {tok.value}\n"
+        if tok.type == 'INT':
+            assembly_code += f"MOV EAX, {tok.value}\n"  # Move the integer value into EAX
             result_var = str(tok.value)
 
-        elif tok.type in ['PLUS', 'MINUS', 'TIMES', 'DIVIDE', 'POW']:
-            if tok.type == 'PLUS':
-                assembly_code += f"ADD EAX, {tok.value}\n"
-            elif tok.type == 'MINUS':
-                assembly_code += f"SUB EAX, {tok.value}\n"
-            elif tok.type == 'TIMES':
-                assembly_code += f"IMUL EAX, {tok.value}\n"
-            elif tok.type == 'DIVIDE':
-                assembly_code += f"DIV EAX, {tok.value}\n"
-            elif tok.type == 'POW':
-                pass  # Placeholder for exponentiation
+        elif tok.type == 'REAL':
+            assembly_code += f"FLD {tok.value}\n"  # Load the real value onto the floating-point stack
+            assembly_code += f"FSTP result_var\n"  # Store the value in the result variable
+            result_var = tok.value
+
+        elif tok.type == 'VAR':
+            assembly_code += f"MOV EAX, {tok.value}\n"  # Move the variable value into EAX
+
+        elif tok.type == 'PLUS':
+            assembly_code += f"ADD EAX, {tok.value}\n"  # Add the value to EAX
+
+        elif tok.type == 'MINUS':
+            assembly_code += f"SUB EAX, {tok.value}\n"  # Subtract the value from EAX
+
+        elif tok.type == 'TIMES':
+            assembly_code += f"IMUL EAX, {tok.value}\n"  # Multiply the value in EAX by the given value
+
+        elif tok.type == 'DIVIDE':
+            assembly_code += f"IDIV {tok.value}\n"  # Divide the value in EAX by the given value
+
+        elif tok.type == 'POW':
+            # Placeholder for POW operation using a loop (Example: Squaring the value)
+            assembly_code += f"MOV ECX, {tok.value}\n"  # Move the power value into ECX
+            assembly_code += "MOV EBX, EAX\n"  # Store the base value in EBX
+
+            assembly_code += "LOOP_START:\n"
+            assembly_code += "IMUL EAX, EBX\n"  # Multiply EAX by the base value
+            assembly_code += "LOOP LOOP_START\n"
+
+            result_var = "EAX"
 
         elif tok.type == 'ASSIGN':
-            assembly_code += f"MOV {result_var}, EAX\n"
+            assembly_code += f"MOV {result_var}, EAX\n"  # Move the value in EAX to the assigned variable
             result_var = None
 
         elif tok.type in ['LESS', 'GREATER', 'LESS_EQUAL', 'GREATER_EQUAL', 'EQUAL', 'NOT_EQUAL']:
-            assembly_code += f"MOV EBX, {tok.value}\n"
-            assembly_code += f"CMP EAX, EBX\n"
+            assembly_code += f"MOV EBX, {tok.value}\n"  # Move the comparison value into EBX
+            assembly_code += f"CMP EAX, EBX\n"  # Compare the value in EAX with the value in EBX
 
             if tok.type == 'LESS':
-                assembly_code += "SETl AL\n"
+                assembly_code += "SETl AL\n"  # Set AL to 1 if EAX < EBX, 0 otherwise
             elif tok.type == 'GREATER':
-                assembly_code += "SETg AL\n"
+                assembly_code += "SETg AL\n"  # Set AL to 1 if EAX > EBX, 0 otherwise
             elif tok.type == 'LESS_EQUAL':
-                assembly_code += "SETle AL\n"
+                assembly_code += "SETle AL\n"  # Set AL to 1 if EAX <= EBX, 0 otherwise
             elif tok.type == 'GREATER_EQUAL':
-                assembly_code += "SETge AL\n"
+                assembly_code += "SETge AL\n"  # Set AL to 1 if EAX >= EBX, 0 otherwise
             elif tok.type == 'EQUAL':
-                assembly_code += "SETE AL\n"
+                assembly_code += "SETE AL\n"  # Set AL to 1 if EAX == EBX, 0 otherwise
             elif tok.type == 'NOT_EQUAL':
-                assembly_code += "SETNE AL\n"
+                assembly_code += "SETNE AL\n"  # Set AL to 1 if EAX != EBX, 0 otherwise
 
-            assembly_code += "MOVZX EAX, AL\n"
-            assembly_code += "MOV print, EAX\n"
+            assembly_code += "MOVZX EAX, AL\n"  # Move the value of AL (either 0 or 1) to EAX
+            assembly_code += "MOV print, EAX\n"  # Move the value in EAX to 'print'
             result_var = "print"
 
-        elif tok.type in ['AND', 'OR', 'NOT']:
-            assembly_code += f"MOV EBX, {tok.value}\n"
-            if tok.type == 'AND':
-                assembly_code += f"AND EAX, EBX\n"
-            elif tok.type == 'OR':
-                assembly_code += f"OR EAX, EBX\n"
-            elif tok.type == 'NOT':
-                assembly_code += f"NOT EAX\n"
+        elif tok.type == 'AND':
+            assembly_code += f"MOV EBX, {tok.value}\n"  # Move the logical value into EBX
+            assembly_code += f"AND EAX, EBX\n"  # Perform logical AND with EAX and EBX
+
+        elif tok.type == 'OR':
+            assembly_code += f"MOV EBX, {tok.value}\n"  # Move the logical value into EBX
+            assembly_code += f"OR EAX, EBX\n"  # Perform logical OR with EAX and EBX
+
+        elif tok.type == 'NOT':
+            assembly_code += f"NOT EAX\n"  # Perform logical NOT on EAX
 
         # Add the tokenized line to the output content
     output_file_content.append(tokenized_line.strip())
