@@ -82,7 +82,6 @@ def t_error(t):
 # Ignore whitespace characters
 t_ignore = ' \t\n'
 
-
 # Symbol table to store variables and their values
 symbol_table = {}
 
@@ -114,24 +113,26 @@ with open("input_file.txt", "r") as input_file:
     input_data = input_file.readlines()
 
 output_file_content = []
+assembly_file_content = []
 
 for line in input_data:
     lexer.input(line.strip())
     tokens = []
 
-    # Tokenize each line and generate assembly-like code
+    # Tokenize each line
+    tokenized_line = ""
     assembly_code = ""
     result_var = ""
     for tok in lexer:
-        if tok.type not in ['ERROR', 'ASSIGN', 'EQUAL', 'NOT_EQUAL', 'GREATER', 'LESS', 'GREATER_EQUAL', 'LESS_EQUAL', 'PRINT']:
-            tokens.append(f"{tok.value}/{tok.type}")
-        elif tok.type in ['EQUAL', 'NOT_EQUAL', 'GREATER', 'LESS', 'GREATER_EQUAL', 'LESS_EQUAL']:
-            if tok.type == 'EQUAL':
-                tokens.append("=/= ")
+        if tok.type in tokens:
+            if tok.type not in ['ERROR', 'ASSIGN', 'EQUAL', 'NOT_EQUAL', 'GREATER', 'LESS', 'GREATER_EQUAL',
+                                'LESS_EQUAL', 'PRINT']:
+                tokens.append(f"{tok.value}/{tok.type}")
             else:
-                tokens.append("!=/= ")
-        else:
-            tokens.append(f"{tok.value}/{tok.type}")
+                tokens.append(f"{tok.value}/{tok.type}")
+
+        # Tokenized line for output file
+        tokenized_line += f"{tok.value}/{tok.type} "
 
         # Generate assembly code
         if tok.type in ['INT', 'REAL', 'VAR']:
@@ -143,19 +144,22 @@ for line in input_data:
             assembly_code += f"{tok.type}\n"
             result_var = "print"  # Logical expression sets result to 'print'
         elif tok.type == 'PRINT':
-            if result_var != "print":
-                assembly_code += f"STORE print\n"
-            output_file_content.append(assembly_code)
-            tokens = []
-            assembly_code = ""
-            result_var = ""
+            if result_var == "print":
+                assembly_code += "LOAD 1\n"  # Load 1 for logical true
+            else:
+                assembly_code += "LOAD 0\n"  # Load 0 for logical false
+            result_var = ""  # Reset result_var for next operation
 
-    # Add the last statement to output if any
-    if assembly_code:
-        if result_var != "print":
-            assembly_code += f"STORE print\n"
-        output_file_content.append(assembly_code)
+    # Add the tokenized line to the output content
+    output_file_content.append(tokenized_line.strip())
+
+    # Add the assembly code for the line to the assembly content
+    assembly_file_content.append(assembly_code)
+
+# Write output to a file
+with open("output_file.txt", "w") as output_file:
+    output_file.write("\n".join(output_file_content))
 
 # Write assembly-like output to a file
-with open("assembly_output.txt", "w") as output_file:
-    output_file.write("\n".join(output_file_content))
+with open("assembly_output.txt", "w") as assembly_file:
+    assembly_file.write("\n".join(assembly_file_content))
