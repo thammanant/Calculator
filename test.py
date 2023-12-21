@@ -134,23 +134,29 @@ for line in input_data:
         # Tokenized line for output file
         tokenized_line += f"{tok.value}/{tok.type} "
 
-        # Generate assembly code
+        # Generate assembly code for various token types
         if tok.type in ['INT', 'REAL', 'VAR']:
-            assembly_code += f"LOAD {tok.value}\n"
-            result_var = tok.value
-        elif tok.type in ['PLUS', 'MINUS', 'TIMES', 'DIVIDE', 'INT_DIVIDE', 'POW']:
-            assembly_code += f"{tok.type}\n"
-        elif tok.type in ['EQUAL', 'NOT_EQUAL', 'GREATER', 'LESS', 'GREATER_EQUAL', 'LESS_EQUAL']:
-            assembly_code += f"{tok.type}\n"
-            result_var = "print"  # Logical expression sets result to 'print'
-        elif tok.type == 'PRINT':
-            if result_var == "print":
-                assembly_code += "LOAD 1\n"  # Load 1 for logical true
-            else:
-                assembly_code += "LOAD 0\n"  # Load 0 for logical false
-            result_var = ""  # Reset result_var for next operation
+            assembly_code += f"MOV EAX, {tok.value}\n"  # Move the value to EAX register
+            result_var = str(tok.value)
+        elif tok.type in ['PLUS', 'MINUS', 'TIMES', 'DIVIDE', 'POW']:
+            # Handle arithmetic operations using EAX and other registers as needed
+            # Example: Addition
+            assembly_code += f"ADD EAX, {tok.value}\n"  # Perform addition on values in EAX register
+        elif tok.type in ['ASSIGN']:
+            # Handle variable assignment
+            # Example: Assigning a value to a variable
+            assembly_code += f"MOV {result_var}, {tok.value}\n"  # Move value to variable
+        elif tok.type in ['LESS', 'GREATER', 'LESS_EQUAL', 'GREATER_EQUAL', 'EQUAL', 'NOT_EQUAL']:
+            # Evaluate logical expressions
+            # Example: Comparison and storing result in variable 'print'
+            assembly_code += f"MOV EBX, {tok.value}\n"  # Move the second operand to EBX register
+            assembly_code += f"CMP EAX, EBX\n"  # Compare the values in EAX and EBX
+            assembly_code += "SETcc AL\n"  # Set AL based on condition (cc: condition code)
+            assembly_code += "MOVZX EAX, AL\n"  # Zero-extend AL into EAX
+            assembly_code += "MOV print, EAX\n"  # Store result in variable 'print'
+            result_var = "print"  # Update the result variable after evaluation
 
-    # Add the tokenized line to the output content
+            # Add the tokenized line to the output content
     output_file_content.append(tokenized_line.strip())
 
     # Add the assembly code for the line to the assembly content
