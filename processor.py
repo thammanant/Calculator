@@ -1,19 +1,19 @@
 import re
 
-# Read token definitions from the .lex file
+
 def read_lex_file(file_name):
+    patterns = {}
     with open(file_name, 'r') as file:
-        patterns = {}
         for line in file:
             if line.strip():
                 token_type, pattern = line.strip().split(None, 1)
                 patterns[token_type] = pattern
-        return patterns
+    return patterns
 
-# Tokenize function
+
 def tokenize(input_string, patterns):
-    # Regular expression pattern to match any token
-    pattern = '|'.join(f'(?P<{token}>{regex})' for token, regex in patterns.items())
+    sorted_patterns = sorted(patterns.items(), key=lambda x: len(x[1]), reverse=True)
+    pattern = '|'.join(f'(?P<{token}>{regex})' for token, regex in sorted_patterns)
 
     tokens = []
     for match in re.finditer(pattern, input_string):
@@ -23,17 +23,30 @@ def tokenize(input_string, patterns):
                 break
     return tokens
 
-# Read token definitions from the .lex file
-token_patterns = read_lex_file('64011658_64011594.lex')
 
-# Read input from file
-with open('input.txt', 'r') as input_file:
-    input_string = input_file.read()
+def main():
+    lex_file_name = '64011658_64011594.lex'
+    input_file_name = 'input.txt'
+    output_file_name = '64011658_64011594.tok'
 
-# Tokenize the input string
-tokenized_input = tokenize(input_string, token_patterns)
+    token_patterns = read_lex_file(lex_file_name)
 
-# Print tokenized output
-for token in tokenized_input:
-    print(f"{token[1]}/{token[0]}", end=' ')
-print()
+    with open(input_file_name, 'r') as input_file:
+        input_string = input_file.read()
+
+    tokenized_input = tokenize(input_string, token_patterns)
+
+    with open(output_file_name, 'w') as output_file:
+        for token in tokenized_input:
+            if token[0] in {'ADD', 'SUB', 'MUL', 'DIV', 'INT_DIV', 'GT', 'GTE', 'LT', 'LTE', 'EQ', 'NEQ', 'ASSIGN'}:
+                output_file.write(f"{token[1]}/{token[1]} ")
+            elif token[0] == 'WS':
+                output_file.write(f"{token[1]}")
+            else:
+                output_file.write(f"{token[1]}/{token[0]} ")
+
+    print(f"Output written to {output_file_name}")
+
+
+if __name__ == "__main__":
+    main()

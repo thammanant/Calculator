@@ -1,6 +1,20 @@
-INT     \d+
-REAL    \d+\.\d+
+POW     \^
+ADD     \+
+SUB     -
+MUL     \*
+INT_DIV //
+DIV     /
+GTE     >=
+GT      >
+LTE     <=
+LT      <
+EQ      ==
+NEQ     !=
+LPAREN  \(
+RPAREN  \)
+ASSIGN  =
 VAR     [a-zA-Z_][a-zA-Z0-9_]*
-OP      [\+\-\*\/\^=!\(\)]
+REAL    [0-9]+\.[0-9]+([eE][+-]?[0-9]+)?
+INT     [0-9]+
+WS      [" "\t\r\n\f\v]+
 ERR     .
-WS      [ \t\n]
