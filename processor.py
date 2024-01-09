@@ -1,5 +1,6 @@
 import re
 
+
 def read_lex_file(file_name):
     patterns = {}
     with open(file_name, 'r') as file:
@@ -22,6 +23,7 @@ def tokenize(input_string, patterns):
                 break
     return tokens
 
+
 def main():
     lex_file_name = '64011658_64011594.lex'
     input_file_name = 'input.txt'
@@ -37,7 +39,6 @@ def main():
 
     line_number = 1
     char_position = 1
-    error_messages = []
 
     with open(output_file_name, 'w') as output_file:
         for token in tokenized_input:
@@ -50,33 +51,60 @@ def main():
 
     print(f"Output written to {output_file_name}")
 
+    new_line = False
+    var = []
 
     with open(outputbracket_file_name, 'w') as output_file:
         current_expression = ''
-        for token in tokenized_input:
-            if token[0] in {'ADD', 'SUB', 'MUL', 'DIV', 'POW', 'INT_DIV', 'GT', 'GTE', 'LT', 'LTE', 'EQ', 'NEQ', 'ASSIGN'}:
+        prev_token_type = None
+
+        for i, token in enumerate(tokenized_input):
+            # Use i directly to get the next token
+            next_token = tokenized_input[i + 1] if i + 1 < len(tokenized_input) else None
+            if new_line and token[1] != '\n':
+                continue
+            else:
+                new_line = False
+
+            if token[0] in {'ADD', 'SUB', 'MUL', 'DIV', 'POW', 'INT_DIV', 'GT', 'GTE', 'LT', 'LTE', 'EQ', 'NEQ'}:
+                current_expression += token[1]
+            elif token[0] in {'ASSIGN'}:
                 current_expression += token[1]
             elif token[0] == 'WS':
                 pass
-            else:
-                if current_expression:
-                    output_file.write(f"({current_expression}) ")
+            elif token[0] in {'VAR', 'REAL', 'INT'}:  # operand
+                if token[0] == 'VAR' and token[1] not in var:
+                    if next_token[0] != 'ASSIGN':
+                        output_file.write(f"Undefined variable {token[1]} at line {line_number}, pos {char_position}")
+                        current_expression = ''
+                        new_line = True
+                    else:
+                        var.append(token[1])
+
+                if prev_token_type in {'VAR', 'REAL', 'INT'}:
+                    output_file.write(f"Syntax error at line {line_number}, pos {char_position}")
                     current_expression = ''
-                if token[0] == 'ERR':
-                    error_messages.append(f"SyntaxError at line {line_number}, pos {char_position}")
+                    new_line = True
                 else:
                     current_expression += token[1]
+            else:             # error
+                if token[0] == 'ERR':           # not sure
+                    output_file.write(f"Syntax error at line {line_number}, pos {char_position}")
+                    current_expression = ''
+                    new_line = True
+
+            prev_token_type = token[0]
+
             if token[1] == '\n':
                 if current_expression:
                     output_file.write(f"({current_expression})\n")
                     current_expression = ''
+                else:
+                    output_file.write(f"\n")
                 line_number += 1
                 char_position = 1
             else:
                 char_position += len(token[1])
-
-    with open(outputbracket_file_name, 'a') as output_file:
-        output_file.write('\n'.join(error_messages))
 
     print(f"Output written to {outputbracket_file_name}")
 
