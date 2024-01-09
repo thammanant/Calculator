@@ -58,31 +58,35 @@ def main():
     print(f"Output written to {output_file_name}")
 
     with open(outputbracket_file_name, 'w') as output_file:
-        current_expression = ''
+        parsed_output = []
         for token in tokenized_input:
-            if token[0] in {'ADD', 'SUB', 'MUL', 'DIV', 'POW', 'INT_DIV', 'GT', 'GTE', 'LT', 'LTE', 'EQ', 'NEQ',
-                            'ASSIGN'}:
-                current_expression += token[1]
-            elif token[0] == 'WS':
-                pass
+            if token[0] in {'NUM', 'VAR'}:
+                parsed_output.append(token[1])
+            elif token[0] in {'ADD', 'SUB', 'MUL', 'DIV', 'POW', 'INT_DIV', 'GT', 'GTE', 'LT', 'LTE', 'EQ', 'NEQ',
+                              'ASSIGN'}:
+                parsed_output.append(token[1])
             else:
-                if current_expression:
-                    output_file.write(f"({current_expression}) ")
-                    current_expression = ''
+                expression = ''.join(parsed_output)
+                if token[1] == '\n':
+                    if len(parsed_output) > 1:
+                        output_file.write(f"({expression[0]}{expression[1:-1]}{expression[-1]})\n")
+                    else:
+                        output_file.write(f"{expression}\n")
+                    parsed_output = []
+                else:
+                    parsed_output.append(token[1])
+
                 if token[0] == 'ERR':
                     error_messages.append(f"SyntaxError at line {line_number}, pos {char_position}")
                 elif token[0] == 'VAR':
                     var_name = token[1]
                     if var_name not in assigned_vars:
-                        error_messages.append(f"Undefined variable {var_name} at line {line_number}, pos {char_position}")
+                        error_messages.append(
+                            f"Undefined variable {var_name} at line {line_number}, pos {char_position}")
                 elif token[0] == 'NUM':
                     error_messages.append(f"Use of unassigned NUM at line {line_number}, pos {char_position}")
-                else:
-                    current_expression += token[1]
+
             if token[1] == '\n':
-                if current_expression:
-                    output_file.write(f"({current_expression})\n")
-                    current_expression = ''
                 line_number += 1
                 char_position = 1
             else:
@@ -91,7 +95,7 @@ def main():
         if error_messages:
             output_file.write('\n'.join(error_messages))
 
-    print(f"Output written to {outputbracket_file_name}")
+    print(f"Parsed output written to {outputbracket_file_name}")
 
 
 if __name__ == "__main__":
