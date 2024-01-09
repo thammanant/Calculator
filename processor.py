@@ -16,17 +16,12 @@ def tokenize(input_string, patterns):
     pattern = '|'.join(f'(?P<{token}>{regex})' for token, regex in sorted_patterns)
 
     tokens = []
-    assigned_vars = set()  # Track assigned variables
-
     for match in re.finditer(pattern, input_string):
         for name, value in match.groupdict().items():
             if value:
-                if name == 'VAR_ASSIGN':
-                    assigned_vars.add(value.split('=')[0].strip())  # Add assigned variable to set
                 tokens.append((name, value))
                 break
-
-    return tokens, assigned_vars
+    return tokens
 
 
 def main():
@@ -40,11 +35,10 @@ def main():
     with open(input_file_name, 'r') as input_file:
         input_string = input_file.read()
 
-    tokenized_input, assigned_vars = tokenize(input_string, token_patterns)
+    tokenized_input = tokenize(input_string, token_patterns)
 
     line_number = 1
     char_position = 1
-    error_messages = []
 
     with open(output_file_name, 'w') as output_file:
         for token in tokenized_input:
@@ -57,45 +51,62 @@ def main():
 
     print(f"Output written to {output_file_name}")
 
-    with open(outputbracket_file_name, 'w') as output_file:
-        parsed_output = []
-        for token in tokenized_input:
-            if token[0] in {'NUM', 'VAR'}:
-                parsed_output.append(token[1])
-            elif token[0] in {'ADD', 'SUB', 'MUL', 'DIV', 'POW', 'INT_DIV', 'GT', 'GTE', 'LT', 'LTE', 'EQ', 'NEQ',
-                              'ASSIGN'}:
-                parsed_output.append(token[1])
-            else:
-                expression = ''.join(parsed_output)
-                if token[1] == '\n':
-                    if len(parsed_output) > 1:
-                        output_file.write(f"({expression[0]}{expression[1:-1]}{expression[-1]})\n")
-                    else:
-                        output_file.write(f"{expression}\n")
-                    parsed_output = []
-                else:
-                    parsed_output.append(token[1])
+    new_line = False
+    var = []
 
-                if token[0] == 'ERR':
-                    error_messages.append(f"SyntaxError at line {line_number}, pos {char_position}")
-                elif token[0] == 'VAR':
-                    var_name = token[1]
-                    if var_name not in assigned_vars:
-                        error_messages.append(
-                            f"Undefined variable {var_name} at line {line_number}, pos {char_position}")
-                elif token[0] == 'NUM':
-                    error_messages.append(f"Use of unassigned NUM at line {line_number}, pos {char_position}")
+    with open(outputbracket_file_name, 'w') as output_file:
+        current_expression = ''
+        prev_token_type = None
+
+        for i, token in enumerate(tokenized_input):
+            # Use i directly to get the next token
+            next_token = tokenized_input[i + 1] if i + 1 < len(tokenized_input) else None
+            if new_line and token[1] != '\n':
+                continue
+            else:
+                new_line = False
+
+            if token[0] in {'ADD', 'SUB', 'MUL', 'DIV', 'POW', 'INT_DIV', 'GT', 'GTE', 'LT', 'LTE', 'EQ', 'NEQ'}:
+                current_expression += token[1]
+            elif token[0] in {'ASSIGN'}:
+                current_expression += token[1]
+            elif token[0] == 'WS':
+                pass
+            elif token[0] in {'VAR', 'REAL', 'INT'}:  # operand
+                if token[0] == 'VAR' and token[1] not in var:
+                    if next_token[0] != 'ASSIGN':
+                        output_file.write(f"Undefined variable {token[1]} at line {line_number}, pos {char_position}")
+                        current_expression = ''
+                        new_line = True
+                    else:
+                        var.append(token[1])
+
+                if prev_token_type in {'VAR', 'REAL', 'INT'}:
+                    output_file.write(f"Syntax error at line {line_number}, pos {char_position}")
+                    current_expression = ''
+                    new_line = True
+                else:
+                    current_expression += token[1]
+            else:             # error
+                if token[0] == 'ERR':           # not sure
+                    output_file.write(f"Syntax error at line {line_number}, pos {char_position}")
+                    current_expression = ''
+                    new_line = True
+
+            prev_token_type = token[0]
 
             if token[1] == '\n':
+                if current_expression:
+                    output_file.write(f"({current_expression})\n")
+                    current_expression = ''
+                else:
+                    output_file.write(f"\n")
                 line_number += 1
                 char_position = 1
             else:
                 char_position += len(token[1])
 
-        if error_messages:
-            output_file.write('\n'.join(error_messages))
-
-    print(f"Parsed output written to {outputbracket_file_name}")
+    print(f"Output written to {outputbracket_file_name}")
 
 
 if __name__ == "__main__":
