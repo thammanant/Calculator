@@ -1,5 +1,6 @@
 import re
 
+
 def read_lex_file(file_name):
     patterns = {}
     with open(file_name, 'r') as file:
@@ -15,12 +16,18 @@ def tokenize(input_string, patterns):
     pattern = '|'.join(f'(?P<{token}>{regex})' for token, regex in sorted_patterns)
 
     tokens = []
+    assigned_vars = set()  # Track assigned variables
+
     for match in re.finditer(pattern, input_string):
         for name, value in match.groupdict().items():
             if value:
+                if name == 'VAR_ASSIGN':
+                    assigned_vars.add(value.split('=')[0].strip())  # Add assigned variable to set
                 tokens.append((name, value))
                 break
-    return tokens
+
+    return tokens, assigned_vars
+
 
 def main():
     lex_file_name = '64011658_64011594.lex'
@@ -33,7 +40,7 @@ def main():
     with open(input_file_name, 'r') as input_file:
         input_string = input_file.read()
 
-    tokenized_input = tokenize(input_string, token_patterns)
+    tokenized_input, assigned_vars = tokenize(input_string, token_patterns)
 
     line_number = 1
     char_position = 1
@@ -50,11 +57,11 @@ def main():
 
     print(f"Output written to {output_file_name}")
 
-
     with open(outputbracket_file_name, 'w') as output_file:
         current_expression = ''
         for token in tokenized_input:
-            if token[0] in {'ADD', 'SUB', 'MUL', 'DIV', 'POW', 'INT_DIV', 'GT', 'GTE', 'LT', 'LTE', 'EQ', 'NEQ', 'ASSIGN'}:
+            if token[0] in {'ADD', 'SUB', 'MUL', 'DIV', 'POW', 'INT_DIV', 'GT', 'GTE', 'LT', 'LTE', 'EQ', 'NEQ',
+                            'ASSIGN'}:
                 current_expression += token[1]
             elif token[0] == 'WS':
                 pass
@@ -64,6 +71,12 @@ def main():
                     current_expression = ''
                 if token[0] == 'ERR':
                     error_messages.append(f"SyntaxError at line {line_number}, pos {char_position}")
+                elif token[0] == 'VAR':
+                    var_name = token[1]
+                    if var_name not in assigned_vars:
+                        error_messages.append(f"Undefined variable {var_name} at line {line_number}, pos {char_position}")
+                elif token[0] == 'NUM':
+                    error_messages.append(f"Use of unassigned NUM at line {line_number}, pos {char_position}")
                 else:
                     current_expression += token[1]
             if token[1] == '\n':
@@ -75,8 +88,8 @@ def main():
             else:
                 char_position += len(token[1])
 
-    with open(outputbracket_file_name, 'a') as output_file:
-        output_file.write('\n'.join(error_messages))
+        if error_messages:
+            output_file.write('\n'.join(error_messages))
 
     print(f"Output written to {outputbracket_file_name}")
 

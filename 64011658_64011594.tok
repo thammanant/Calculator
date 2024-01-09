@@ -1,13 +1,13 @@
-23/INT +/+ 8/INT 
-2.5/REAL  */*  0/INT 
+23/INT +/OP 8/INT 
+2.5/REAL  */OP  0/INT 
 5/INT NUM/VAR ^/POW  3.0/REAL 
 x/VAR =/= 5/INT 
-10/INT */* x/VAR 
+10/INT */OP x/VAR 
 x/VAR  =/= y/VAR 
 x/VAR !=/!= 5/INT 
-X/VAR #/ERR +/+ 8/INT 
-3/INT -/- 6/INT 
-3/INT /// 8/INT 
+X/VAR #/ERR +/OP 8/INT 
+3/INT -/OP 6/INT 
+3/INT //OP 8/INT 
 4/INT </< 9/INT 
 0/INT >/> 7/INT 
 0/INT ==/== 5/INT 
