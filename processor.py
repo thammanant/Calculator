@@ -9,6 +9,7 @@ def read_lex_file(file_name):
                 patterns[token_type] = pattern
     return patterns
 
+
 def tokenize(input_string, patterns):
     sorted_patterns = sorted(patterns.items(), key=lambda x: len(x[1]), reverse=True)
     pattern = '|'.join(f'(?P<{token}>{regex})' for token, regex in sorted_patterns)
@@ -24,7 +25,8 @@ def tokenize(input_string, patterns):
 def main():
     lex_file_name = '64011658_64011594.lex'
     input_file_name = 'input.txt'
-    output_file_name = '64011658_64011594.bracket'
+    output_file_name = '64011658_64011594.tok'
+    outputbracket_file_name = '64011658_64011594.bracket'
 
     token_patterns = read_lex_file(lex_file_name)
 
@@ -38,6 +40,18 @@ def main():
     error_messages = []
 
     with open(output_file_name, 'w') as output_file:
+        for token in tokenized_input:
+            if token[0] in {'ADD', 'SUB', 'MUL', 'DIV', 'INT_DIV', 'GT', 'GTE', 'LT', 'LTE', 'EQ', 'NEQ', 'ASSIGN'}:
+                output_file.write(f"{token[1]}/{token[1]} ")
+            elif token[0] == 'WS':
+                output_file.write(f"{token[1]}")
+            else:
+                output_file.write(f"{token[1]}/{token[0]} ")
+
+    print(f"Output written to {output_file_name}")
+
+
+    with open(outputbracket_file_name, 'w') as output_file:
         current_expression = ''
         for token in tokenized_input:
             if token[0] in {'ADD', 'SUB', 'MUL', 'DIV', 'POW', 'INT_DIV', 'GT', 'GTE', 'LT', 'LTE', 'EQ', 'NEQ', 'ASSIGN'}:
@@ -61,10 +75,11 @@ def main():
             else:
                 char_position += len(token[1])
 
-    with open(output_file_name, 'a') as output_file:
+    with open(outputbracket_file_name, 'a') as output_file:
         output_file.write('\n'.join(error_messages))
 
-    print(f"Output written to {output_file_name}")
+    print(f"Output written to {outputbracket_file_name}")
+
 
 if __name__ == "__main__":
     main()
