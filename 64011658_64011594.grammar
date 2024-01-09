@@ -1,0 +1,15 @@
+<expression> ::= <arith_expr> | <assignment_expr> | <comparison_expr>
+
+<arith_expr> ::= '(' <arith_expr> ')' | <arith_expr> <binary_operator> <arith_expr> | <term>
+
+<term> ::= <number> | <variable>
+
+<number> ::= INT | REAL
+
+<variable> ::= VAR
+
+<binary_operator> ::= ADD | SUB | MUL | DIV | POW
+
+<assignment_expr> ::= VAR ASSIGN <arith_expr>
+
+<comparison_expr> ::= VAR ('EQ' | 'NEQ' | 'LT' | 'LTE' | 'GT' | 'GTE') <arith_expr>
