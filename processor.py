@@ -24,23 +24,30 @@ def tokenize(input_string, patterns):
     return tokens
 
 
+def convert_to_string(current_expression):
+    string = ""
+    for i in current_expression:
+        string += list(i.keys())[0]
+    return string
+
+
 def check_op_compare(current_expression, line_number, output_file):
     if list(current_expression[1].values())[0] in {'ADD', 'SUB', 'MUL', 'DIV', 'INT_DIV'}:
         if list(current_expression[2].values())[0] in {'INT', 'REAL', 'VAR'}:
-            pass
+            output_file.write(convert_to_string(current_expression))
         elif list(current_expression[2].values())[0] in {'ADD', 'SUB'}:
             if list(current_expression[3].values())[0] in {'INT', 'REAL', 'VAR'}:
-                pass
+                output_file.write(convert_to_string(current_expression))
             else:
                 output_file.write(f"Syntax error at line {line_number}, pos 4")
         else:
             output_file.write(f"Syntax error at line {line_number}, pos 3")
     elif list(current_expression[1].values())[0] in {'GT', 'GTE', 'LT', 'LTE', 'EQ', 'NEQ'}:
         if list(current_expression[2].values())[0] in {'INT', 'REAL', 'VAR'}:
-            pass
+            output_file.write(convert_to_string(current_expression))
         elif list(current_expression[2].values())[0] in {'ADD', 'SUB'}:
             if list(current_expression[3].values())[0] in {'INT', 'REAL', 'VAR'}:
-                pass
+                output_file.write(convert_to_string(current_expression))
             else:
                 output_file.write(f"Syntax error at line {line_number}, pos 4")
         else:
@@ -48,21 +55,19 @@ def check_op_compare(current_expression, line_number, output_file):
     else:
         output_file.write(f"Syntax error at line {line_number}, pos 2")
 
-
 def varnum(current_expression, line_number, output_file, var, csv_value):
     if list(current_expression[0].values())[0] in {'VAR'}:
         if list(current_expression[1].values())[0] in {'ASSIGN'}:
             if list(current_expression[2].values())[0] in {'INT', 'REAL', 'VAR'}:
-                if list(current_expression[2].values())[0] in 'VAR' and list(current_expression[2].keys())[
-                    0] not in var:  # Eg:x=y
+                if list(current_expression[2].values())[0] in 'VAR' and list(current_expression[2].keys())[0] not in var:  # Eg:x=y
                     output_file.write(f"Undefined variable {list(current_expression[2].keys())[0]} at line {line_number}, pos 3")
                 elif list(current_expression[0].keys())[0] not in var:  # var assigned
                     var.append(list(current_expression[0].keys())[0])
-                    csv_value.append(
-                        f"{list(current_expression[0].keys())[0]}, {line_number}, {len(list(current_expression[0].keys())[0])}, {list(current_expression[0].values())[0]}, {list(current_expression[2].keys())[0]}")
+                    csv_value.append(f"{list(current_expression[0].keys())[0]}, {line_number}, {len(list(current_expression[0].keys())[0])}, {list(current_expression[0].values())[0]}, {list(current_expression[2].keys())[0]}")
+                    output_file.write(convert_to_string(current_expression))
                 else:  # var updated
-                    csv_value.append(
-                        f"{list(current_expression[0].keys())[0]}, {line_number}, {len(list(current_expression[0].keys())[0])}, {list(current_expression[0].values())[0]}, {list(current_expression[2].keys())[0]}")
+                    csv_value.append(f"{list(current_expression[0].keys())[0]}, {line_number}, {len(list(current_expression[0].keys())[0])}, {list(current_expression[0].values())[0]}, {list(current_expression[2].keys())[0]}")
+                    output_file.write(convert_to_string(current_expression))
             elif list(current_expression[2].values())[0] in {'ADD', 'SUB'}:
                 if list(current_expression[3].values())[0] in {'INT', 'REAL', 'VAR'}:
                     if list(current_expression[3].values())[0] in 'VAR' and list(current_expression[3].keys())[0] not in var:  # Eg:x=-z
@@ -70,8 +75,10 @@ def varnum(current_expression, line_number, output_file, var, csv_value):
                     elif list(current_expression[0].keys())[0] not in var:  # var assigned
                         var.append(list(current_expression[0].keys())[0])
                         csv_value.append(f"{list(current_expression[0].keys())[0]}, {line_number}, {len(list(current_expression[0].keys())[0])}, {list(current_expression[0].values())[0]}, {list(current_expression[2].keys())[0] + list(current_expression[3].keys())[0]}")
+                        output_file.write(convert_to_string(current_expression))
                     else:  # var updated
                         csv_value.append(f"{list(current_expression[0].keys())[0]}, {line_number}, {len(list(current_expression[0].keys())[0])}, {list(current_expression[0].values())[0]}, {list(current_expression[2].keys())[0] + list(current_expression[3].keys())[0]}")
+                        output_file.write(convert_to_string(current_expression))
                 else:  # Eg:x=+*
                     output_file.write(f"Syntax error at line {line_number}, pos 4")
             else:
@@ -104,6 +111,7 @@ def main():
     input_file_name = 'input.txt'
     output_file_name = '64011658_64011594.tok'
     outputbracket_file_name = '64011658_64011594.bracket'
+    outputcsv_file_name = '64011658_64011594.csv'
 
     token_patterns = read_lex_file(lex_file_name)
 
@@ -144,9 +152,15 @@ def main():
             else:
                 dict = {token[1]: token[0]}
                 current_expression.append(dict)
-        print(csv_value)
 
     print(f"Output written to {outputbracket_file_name}")
+
+    with open(outputcsv_file_name, 'w') as output_file:
+        output_file.write("Variable, Line, Length, Type, Value\n")
+        for i in csv_value:
+            output_file.write(f"{i}\n")
+
+    print(f"Output written to {outputcsv_file_name}")
 
 
 if __name__ == "__main__":
