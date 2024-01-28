@@ -1,167 +1,210 @@
 import re
 
 
-def read_lex_file(file_name):
-    patterns = {}
-    with open(file_name, 'r') as file:
-        for line in file:
-            if line.strip():
-                token_type, pattern = line.strip().split(None, 1)
-                patterns[token_type] = pattern
-    return patterns
+class ParseNode:
+    def __init__(self, symbol, value=None, children=None):
+        self.symbol = symbol
+        self.value = value
+        self.children = children or []
+
+    def __repr__(self):
+        if self.value is not None:
+            return f"{self.symbol}({self.value})"
+
+        children_repr = ', '.join(repr(child) for child in self.children)
+        return f"{self.symbol}([{children_repr}])" if self.children else f"{self.symbol}([])"
 
 
-def tokenize(input_string, patterns):
-    sorted_patterns = sorted(patterns.items(), key=lambda x: len(x[1]), reverse=True)
-    pattern = '|'.join(f'(?P<{token}>{regex})' for token, regex in sorted_patterns)
+def convert_grammar_file(file_path):
+    with open(file_path, 'r') as file:
+        content = file.read()
 
-    tokens = []
-    for match in re.finditer(pattern, input_string):
-        for name, value in match.groupdict().items():
-            if value:
-                tokens.append((name, value))
-                break
-    return tokens
+    grammar = {}
+    for line in content.split('\n'):
+        if not line:
+            continue
+        non_terminal, productions = line.split(' ::= ')
+        non_terminal = non_terminal.strip('<>') if non_terminal.isalpha() else non_terminal.strip()
+        grammar[non_terminal] = [prod.strip() for prod in productions.split('|')]
 
-
-def convert_to_string(current_expression):
-    string = ""
-    for i in current_expression:
-        string += list(i.keys())[0]
-    return string
-
-
-def check_op_compare(current_expression, line_number, output_file):
-    if list(current_expression[1].values())[0] in {'ADD', 'SUB', 'MUL', 'DIV', 'INT_DIV'}:
-        if list(current_expression[2].values())[0] in {'INT', 'REAL', 'VAR'}:
-            output_file.write(convert_to_string(current_expression))
-        elif list(current_expression[2].values())[0] in {'ADD', 'SUB'}:
-            if list(current_expression[3].values())[0] in {'INT', 'REAL', 'VAR'}:
-                output_file.write(convert_to_string(current_expression))
+    converted_grammar = {}
+    for non_terminal, productions in grammar.items():
+        converted_productions = []
+        for production in productions:
+            symbols = [sym.strip('<>') if sym.isalpha() else sym for sym in production.split()]
+            if len(symbols) == 1 and symbols[0] == 'EPSILON':
+                converted_productions.append('EPSILON')
             else:
-                output_file.write(f"Syntax error at line {line_number}, pos 4")
-        else:
-            output_file.write(f"Syntax error at line {line_number}, pos 3")
-    elif list(current_expression[1].values())[0] in {'GT', 'GTE', 'LT', 'LTE', 'EQ', 'NEQ'}:
-        if list(current_expression[2].values())[0] in {'INT', 'REAL', 'VAR'}:
-            output_file.write(convert_to_string(current_expression))
-        elif list(current_expression[2].values())[0] in {'ADD', 'SUB'}:
-            if list(current_expression[3].values())[0] in {'INT', 'REAL', 'VAR'}:
-                output_file.write(convert_to_string(current_expression))
+                converted_productions.append([sym if sym.isalpha() else sym.strip('<>') for sym in symbols])
+
+        converted_grammar[non_terminal.strip('<>')] = converted_productions
+
+    return converted_grammar
+
+
+def tokenize_input_file(input_file):
+    with open(input_file) as file:
+        input_lines = file.readlines()
+
+    token_types_list = []
+
+    for line_number, line in enumerate(input_lines, start=1):
+        types = [token.split('/')[1] for token in re.findall(r'\S+', line)]
+        token_types_list.append(types)
+
+    return token_types_list
+
+
+
+def parse(grammar_dict, token_types, line_number=1, position=0):
+    for start_symbol in grammar_dict.keys():
+        print(f"\nTrying to parse line {line_number} with start symbol: {start_symbol}")
+        print(f"Token Types: {token_types}")
+        result, parse_tree, symbol_table = parse_helper(grammar_dict, start_symbol, token_types,
+                                                        line_number, position)
+
+        if result is not False:
+            print(f"Matches Grammar with start symbol {start_symbol}: True")
+            print("Parse Tree:", parse_tree)
+            print("Symbol Table:", symbol_table)
+            return True, parse_tree, symbol_table
+
+    print("Matches Grammar: False")
+    return False, None, None
+
+
+def parse_helper(grammar_dict, current_symbol, token_types, line_number, position):
+    if current_symbol not in grammar_dict:
+        print(f"Error: Symbol {current_symbol} not found in grammar.")
+        return False, None, None
+
+    parse_node = ParseNode(current_symbol)
+    symbol_table = {}
+
+    for production in grammar_dict[current_symbol]:
+        match, remaining_tokens, child_nodes, child_symbol_table = match_production(
+            grammar_dict, production, token_types, line_number, position
+        )
+
+        if match:
+            parse_node.children = child_nodes
+            symbol_table.update(child_symbol_table)
+            return True, parse_node, symbol_table
+
+    return False, None, None
+
+
+def match_production(grammar_dict, production, token_types, line_number, position):
+    remaining_tokens = position
+    child_nodes = []
+    child_symbol_table = {}
+
+    for symbol in production:
+        if symbol == 'EPSILON':
+            continue
+
+        if isinstance(symbol, list):  # Non-terminal
+            result, node, symbol_table = parse_helper(
+                grammar_dict, symbol, token_types, line_number, remaining_tokens
+            )
+
+            if not result:
+                return False, remaining_tokens, [], {}
+
+            child_nodes.append(node)
+            child_symbol_table.update(symbol_table)
+        elif symbol in ('INT', 'REAL', 'VAR'):
+            result, remaining_tokens, specific_nodes, specific_symbol_table = match_specific_context(
+                token_types, line_number, remaining_tokens, symbol
+            )
+
+            if not result:
+                return False, remaining_tokens, [], {}
+
+            child_nodes.extend(specific_nodes)
+            child_symbol_table.update(specific_symbol_table)
+        else:  # Terminal
+            if remaining_tokens < len(token_types) and token_types[remaining_tokens] == symbol:
+                # Matched a terminal symbol
+                child_nodes.append(ParseNode(symbol, token_types[remaining_tokens]))
+                remaining_tokens += 1
             else:
-                output_file.write(f"Syntax error at line {line_number}, pos 4")
-        else:
-            output_file.write(f"Syntax error at line {line_number}, pos 3")
+                # Unexpected token, handle gracefully
+                return False, remaining_tokens, [], {}
+
+    return True, remaining_tokens, child_nodes, child_symbol_table
+
+
+def match_specific_context(token_types, line_number, position, symbol):
+    if symbol == 'INT':
+        # Handle context for 'INT'
+        result, remaining_tokens, int_nodes, int_symbol_table = match_int_context(
+            token_types, line_number, position
+        )
+        return result, remaining_tokens, int_nodes, int_symbol_table
+    elif symbol == 'REAL':
+        # Handle context for 'REAL'
+        result, remaining_tokens, real_nodes, real_symbol_table = match_real_context(
+            token_types, line_number, position
+        )
+        return result, remaining_tokens, real_nodes, real_symbol_table
+    elif symbol == 'VAR':
+        # Handle context for 'VAR'
+        result, remaining_tokens, var_nodes, var_symbol_table = match_var_context(
+            token_types, line_number, position
+        )
+        return result, remaining_tokens, var_nodes, var_symbol_table
     else:
-        output_file.write(f"Syntax error at line {line_number}, pos 2")
+        return False, position, [], {}
 
-def varnum(current_expression, line_number, output_file, var, csv_value):
-    if list(current_expression[0].values())[0] in {'VAR'}:
-        if list(current_expression[1].values())[0] in {'ASSIGN'}:
-            if list(current_expression[2].values())[0] in {'INT', 'REAL', 'VAR'}:
-                if list(current_expression[2].values())[0] in 'VAR' and list(current_expression[2].keys())[0] not in var:  # Eg:x=y
-                    output_file.write(f"Undefined variable {list(current_expression[2].keys())[0]} at line {line_number}, pos 3")
-                elif list(current_expression[0].keys())[0] not in var:  # var assigned
-                    var.append(list(current_expression[0].keys())[0])
-                    csv_value.append(f"{list(current_expression[0].keys())[0]}, {line_number}, {len(list(current_expression[0].keys())[0])}, {list(current_expression[0].values())[0]}, {list(current_expression[2].keys())[0]}")
-                    output_file.write(convert_to_string(current_expression))
-                else:  # var updated
-                    csv_value.append(f"{list(current_expression[0].keys())[0]}, {line_number}, {len(list(current_expression[0].keys())[0])}, {list(current_expression[0].values())[0]}, {list(current_expression[2].keys())[0]}")
-                    output_file.write(convert_to_string(current_expression))
-            elif list(current_expression[2].values())[0] in {'ADD', 'SUB'}:
-                if list(current_expression[3].values())[0] in {'INT', 'REAL', 'VAR'}:
-                    if list(current_expression[3].values())[0] in 'VAR' and list(current_expression[3].keys())[0] not in var:  # Eg:x=-z
-                        output_file.write(f"Undefined variable {list(current_expression[3].keys())[0]} at line {line_number}, pos 4")
-                    elif list(current_expression[0].keys())[0] not in var:  # var assigned
-                        var.append(list(current_expression[0].keys())[0])
-                        csv_value.append(f"{list(current_expression[0].keys())[0]}, {line_number}, {len(list(current_expression[0].keys())[0])}, {list(current_expression[0].values())[0]}, {list(current_expression[2].keys())[0] + list(current_expression[3].keys())[0]}")
-                        output_file.write(convert_to_string(current_expression))
-                    else:  # var updated
-                        csv_value.append(f"{list(current_expression[0].keys())[0]}, {line_number}, {len(list(current_expression[0].keys())[0])}, {list(current_expression[0].values())[0]}, {list(current_expression[2].keys())[0] + list(current_expression[3].keys())[0]}")
-                        output_file.write(convert_to_string(current_expression))
-                else:  # Eg:x=+*
-                    output_file.write(f"Syntax error at line {line_number}, pos 4")
-            else:
-                output_file.write(f"Syntax error at line {line_number}, pos 3")
-        else:  # var assigned
-            if list(current_expression[0].keys())[0] in var:
-                check_op_compare(current_expression, line_number, output_file)
-            else:  # var not assigned
-                output_file.write(f"Undefined variable {list(current_expression[0].keys())[0]} at line {line_number},pos 1")
-
-    elif list(current_expression[0].values())[0] in {'INT', 'REAL'}:
-        check_op_compare(current_expression, line_number, output_file)
-
-
-def validation(current_expression, line_number, output_file, var, csv_value):
-    if list(current_expression[0].values())[0] in {'ADD', 'SUB', 'INT', 'REAL', 'VAR'}:
-        if list(current_expression[0].values())[0] in {'ADD', 'SUB'}:
-            output_file.write(list(current_expression[0].keys())[0])
-            del current_expression[0]
-            varnum(current_expression, line_number, output_file, var, csv_value)
-        else:
-            varnum(current_expression, line_number, output_file, var, csv_value)
-
+def match_var_context(token_types, line_number, position):
+    if position < len(token_types) and token_types[position] == 'VAR':
+        # Matched 'VAR'
+        node = ParseNode('VAR', token_types[position])
+        return True, position + 1, [node], {'VAR': token_types[position]}
     else:
-        output_file.write(f"Syntax error at line {line_number}, pos 1")
+        return False, position, [], {}
 
 
-def main():
-    lex_file_name = '64011658_64011594.lex'
-    input_file_name = 'input.txt'
-    output_file_name = '64011658_64011594.tok'
-    outputbracket_file_name = '64011658_64011594.bracket'
-    outputcsv_file_name = '64011658_64011594.csv'
-
-    token_patterns = read_lex_file(lex_file_name)
-
-    with open(input_file_name, 'r') as input_file:
-        input_string = input_file.read()
-
-    tokenized_input = tokenize(input_string, token_patterns)
-
-    line_number = 1
-
-    with open(output_file_name, 'w') as output_file:
-        for token in tokenized_input:
-            if token[0] in {'ADD', 'SUB', 'MUL', 'DIV', 'INT_DIV', 'GT', 'GTE', 'LT', 'LTE', 'EQ', 'NEQ', 'ASSIGN'}:
-                output_file.write(f"{token[1]}/{token[1]} ")
-            elif token[0] == 'WS':
-                output_file.write(f"{token[1]}")
-            else:
-                output_file.write(f"{token[1]}/{token[0]} ")
-
-    print(f"Output written to {output_file_name}")
-
-    with open(outputbracket_file_name, 'w') as output_file:
-        current_expression = []
-        csv_value = []
-        var = []
-
-        for token in tokenized_input:
-            if token[1] == '\n':
-                if len(current_expression) >= 3:
-                    validation(current_expression, line_number, output_file, var, csv_value)
-                else:
-                    output_file.write(f"Syntax error at line {line_number}, pos {len(current_expression)}")
-                output_file.write("\n")
-                current_expression = []
-                line_number += 1
-            elif token[0] == 'WS':
-                continue
-            else:
-                dict = {token[1]: token[0]}
-                current_expression.append(dict)
-
-    print(f"Output written to {outputbracket_file_name}")
-
-    with open(outputcsv_file_name, 'w') as output_file:
-        output_file.write("Variable, Line, Length, Type, Value\n")
-        for i in csv_value:
-            output_file.write(f"{i}\n")
-
-    print(f"Output written to {outputcsv_file_name}")
+def match_real_context(token_types, line_number, position):
+    if position < len(token_types) and token_types[position] == 'REAL':
+        # Matched 'REAL'
+        node = ParseNode('REAL', token_types[position])
+        return True, position + 1, [node], {'REAL': token_types[position]}
+    else:
+        return False, position, [], {}
 
 
-if __name__ == "__main__":
-    main()
+def match_int_context(token_types, line_number, position):
+    if position < len(token_types) and token_types[position] == 'INT':
+        # Matched 'REAL'
+        node = ParseNode('INT', token_types[position])
+        return True, position + 1, [node], {'INT': token_types[position]}
+    else:
+        return False, position, [], {}
+
+
+def compare_with_grammar(grammar_dict, token_types_list):
+    for line_number, token_types in enumerate(token_types_list, start=1):
+        result, parse_tree, symbol_table = parse(grammar_dict, token_types)
+        if not result:
+            print(f"Token Types: {token_types}, Matches Grammar: False")
+        else:
+            print(f"Token Types: {token_types}, Matches Grammar: True")
+            print("Parse Tree:", parse_tree)
+            print("Symbol Table:", symbol_table)
+
+
+# Example usage:
+grammar_file = '64011658_64011594.grammar'
+input_file = '64011658_64011594.tok'
+
+# Load grammar
+grammar_dict = convert_grammar_file(grammar_file)
+print("Grammar:", grammar_dict)
+
+# Tokenize input file
+token_types_list = tokenize_input_file(input_file)
+
+# Compare with grammar
+compare_with_grammar(grammar_dict, token_types_list)
