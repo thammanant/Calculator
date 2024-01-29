@@ -1,15 +1,21 @@
-<expression> ::= <arith_expr> | <assignment_expr> | <comparison_expr>
+<program> ::= <statements>
 
-<arith_expr> ::= '(' <arith_expr> ')' | <arith_expr> <binary_operator> <arith_expr> | <term>
+<statements> ::= <statement> <statements> | EPSILON
 
-<term> ::= <number> | <variable>
+<statement> ::= <assignment> | <expression> | <error>
+
+<assignment> ::= <variable> ASSIGN <expression>
+
+<expression> ::= <term> | <term> <binary-operator> <expression>
+
+<term> ::= <factor> | <factor> POW <term>
+
+<factor> ::= <number> | <variable> | LPAREN <expression> RPAREN
 
 <number> ::= INT | REAL
 
-<variable> ::= VAR
+<variable> ::= VAR | VAR ASSIGN <number>
 
-<binary_operator> ::= ADD | SUB | MUL | DIV | POW
+<binary-operator> ::= ADD | SUB | MUL | DIV | INT_DIV | GTE | GT | LTE | LT | EQ | NEQ | OP
 
-<assignment_expr> ::= VAR ASSIGN <arith_expr>
-
-<comparison_expr> ::= VAR ('EQ' | 'NEQ' | 'LT' | 'LTE' | 'GT' | 'GTE') <arith_expr>
+<error> ::= ERR | # | EPSILON
