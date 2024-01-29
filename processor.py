@@ -2,7 +2,6 @@ import re
 from ply import yacc, lex
 
 
-
 def read_lex_file(file_name):
     patterns = {}
     with open(file_name, 'r') as file:
@@ -152,7 +151,7 @@ def parse_helper(non_terminal, current_index, input_tokens, grammar, symbol_tabl
 
 # Token definition
 tokens = (
-    'INT', 'REAL', 'VAR', 'ADD', 'SUB', 'MUL', 'DIV', 'POW', 'GTE', 'GT', 'LTE', 'LT', 'EQ', 'NEQ', 'OP', 'LPAREN',
+    'INT', 'REAL', 'VAR', 'ADD', 'SUB', 'MUL', 'DIV', 'POW', 'GTE', 'GT', 'LTE', 'LT', 'EQ', 'NEQ', 'LPAREN',
     'RPAREN', 'ASSIGN', 'INT_DIV'
 )
 
@@ -172,8 +171,7 @@ t_LTE = r'<='
 t_LT = r'<'
 t_EQ = r'=='
 t_NEQ = r'!='
-t_OP = r'\('
-t_LPAREN = r'\)'
+t_LPAREN = r'\('
 t_RPAREN = r'\)'
 t_ASSIGN = r'='
 
@@ -286,8 +284,7 @@ def p_binary_operator(p):
                       | LTE
                       | LT
                       | EQ
-                      | NEQ
-                      | OP'''
+                      | NEQ'''
     p[0] = ParseNode('binary-operator', [p[1]])
 
 
@@ -320,9 +317,7 @@ line_number = 1
 
 with open(output_file_name, 'w') as output_file:
     for token in tokenized_input:
-        if token[0] in {'ADD', 'SUB', 'MUL', 'DIV', 'INT_DIV', 'GT', 'GTE', 'LT', 'LTE', 'EQ', 'NEQ', 'ASSIGN'}:
-            output_file.write(f"{token[1]}/{token[1]} ")
-        elif token[0] == 'WS':
+        if token[0] == 'WS':
             output_file.write(f"{token[1]}")
         else:
             output_file.write(f"{token[1]}/{token[0]} ")
