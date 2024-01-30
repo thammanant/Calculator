@@ -1,5 +1,6 @@
 import re
 from ply import yacc, lex
+import code_generator
 
 
 def read_lex_file(file_name):
@@ -183,14 +184,14 @@ t_ignore = ' \t\n'
 # Error handling rule for invalid tokens
 def t_invalid(t):
     r'[0-9]+[a-zA-Z_]+'
-    output_file.write(f"SyntaxError: Invalid token '{t.value}' at line {line_number}, position {t.lexpos+1}")
-    t.lexer.skip(1)
+    output_file.write(f"SyntaxError: Invalid token '{t.value}' at line {line_number}, position {t.lexpos+1}\n")
+    raise SyntaxError
+
 
 # Error handling rule
 def t_error(t):
-    output_file.write(f"SyntaxError '{t.value[0]}' at line {line_number-1}, position {t.lexpos+1}")
-    t.lexer.skip(1)
-
+    output_file.write(f"SyntaxError '{t.value[0]}' at line {line_number-1}, position {t.lexpos+1}\n")
+    raise SyntaxError
 
 
 # Build the lexer
@@ -271,6 +272,14 @@ def p_variable(p):
         p[0] = ParseNode('variable', [p[1]])
     else:
         p[0] = ParseNode('variable', [p[1], p[2], p[3]])
+        value_type = p[3].symbol
+        if value_type == 'number':
+            # Assuming p[3].value is a list containing a single number
+            value = eval(p[3].value[0])
+            value_type = 'INT' if type(value) == int else 'REAL'
+        else:
+            value = p[3].value
+        csv_value.append(f"{p[1]}, {line_number - 1}, 1, {len(p[1])}, {value_type}, {value}")
 
 
 def p_binary_operator(p):
@@ -290,14 +299,14 @@ def p_binary_operator(p):
 
 # Error handling rule
 def p_error(p):
-    output_file.write(f"Undefined variable '{p.value[0]}' at line {line_number-1}, position {p.lexpos+1}")
-
+    output_file.write(f"Undefined variable '{p.value[0]}' at line {line_number-1}, position {p.lexpos+1}\n")
+    raise SyntaxError
 
 
 # Build the parser
 parser = yacc.yacc()
 
-global line_number
+global line_number, csv_value
 
 lex_file_name = '64011658_64011594.lex'
 input_file_name = 'input.txt'
@@ -305,6 +314,7 @@ output_file_name = '64011658_64011594.tok'
 grammar_file = '64011658_64011594.grammar'
 outputbracket_file_name = '64011658_64011594.bracket'
 outputcsv_file_name = '64011658_64011594.csv'
+outputasm_file_name = '64011658_64011594.asm'
 
 token_patterns = read_lex_file(lex_file_name)
 
@@ -313,7 +323,6 @@ with open(input_file_name, 'r') as input_file:
 
 tokenized_input = tokenize(input_string, token_patterns)
 
-line_number = 1
 
 with open(output_file_name, 'w') as output_file:
     for token in tokenized_input:
@@ -325,6 +334,7 @@ with open(output_file_name, 'w') as output_file:
 print(f"Output written to {output_file_name}")
 
 with open(outputbracket_file_name, 'w') as output_file:
+    csv_value = []
     grammar_dict = convert_grammar_file(grammar_file)
 
     # Tokenize input file
@@ -335,16 +345,27 @@ with open(outputbracket_file_name, 'w') as output_file:
         # Parse input
         input_tokens = parse_line(token_types_line, line_number - 2)
 
-        # Call parser without passing input_lines
-        result = parser.parse(input_tokens, tracking=True)
+        try:
+            result = parser.parse(input_tokens, tracking=True)
+            output_file.write(f"({input_tokens})\n")
+        except:
+            continue
 
-        output_file.write(f"({input_tokens})\n")
 
 print(f"Output written to {outputbracket_file_name}")
 
-# with open(outputcsv_file_name, 'w') as output_file:
-#     output_file.write("Variable, Line, Length, Type, Value\n")
-#     for i in csv_value:
-#         output_file.write(f"{i}\n")
-#
-# print(f"Output written to {outputcsv_file_name}")
+with open(outputcsv_file_name, 'w') as output_file:
+    output_file.write("Variable, Line, Length, Type, Value\n")
+    for i in csv_value:
+        output_file.write(f"{i}\n")
+
+print(f"Output written to {outputcsv_file_name}")
+
+
+with open(input_file_name, 'r') as input_file:
+    lines = input_file.read()
+
+with open(outputasm_file_name, 'w') as output_file:
+    output_file.write(code_generator.generate_assembly(lines))
+
+print(f"Output written to {outputasm_file_name}")
