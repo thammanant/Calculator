@@ -16,6 +16,6 @@
 
 <variable> ::= VAR | VAR ASSIGN <number>
 
-<binary-operator> ::= ADD | SUB | MUL | DIV | INT_DIV | GTE | GT | LTE | LT | EQ | NEQ | OP
+<binary-operator> ::= ADD | SUB | MUL | DIV | INT_DIV | GTE | GT | LTE | LT | EQ | NEQ
 
 <error> ::= ERR | # | EPSILON

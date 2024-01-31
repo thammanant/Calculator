@@ -1,15 +1,16 @@
 (23+8)
-(2.5 * 0)
-(5NUM^ 3.0)
+(2.5*0)
+SyntaxError: Invalid token '5NUM' at line 4, position 1
 (x=5)
 (10*x)
-(x =y)
+Undefined variable 'y' at line 6, position 3
 (x!=5)
-(X#+8)
+SyntaxError '#' at line 8, position 2
 (3-6)
 (3/8)
 (4<9)
 (0>7)
 (0==5)
 (3<=2)
-SyntaxError at line 8, pos 2
+(4>=3)
+SyntaxError '^' at line 16, position 2
